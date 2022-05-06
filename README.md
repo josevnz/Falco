@@ -1,4 +1,4 @@
-# FalcoPrometheusGrafana
+# Falco (with Prometheus and Grafana integrations)
 
 I decided to share the code and configuration files I used on the [Securing mixed clouds using Falco, Prometheus, Grafana and Docker](tutorial/README.md) tutorial.
 
@@ -13,7 +13,7 @@ pip install --editable .
 # Generating the diagrams
 
 ```shell
-
+falco_diagram.py tutorial/falco_monitoring
 ```
 
 # Building the package
