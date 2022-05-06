@@ -1,6 +1,6 @@
 # FalcoPrometheusGrafana
 
-I decided to share the code and configuration files I used on the [Securing mixed clouds using Falco, Prometheus, Grafana and Docker](tutorial/TUTORIAL.md) tutorial.
+I decided to share the code and configuration files I used on the [Securing mixed clouds using Falco, Prometheus, Grafana and Docker](tutorial/README.md) tutorial.
 
 You can clone the git repository and install in development mode:
 
