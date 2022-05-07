@@ -1,3 +1,5 @@
+# Sample configuration for the tutorial
+# has 3 scrappers: falco, node and docker
 global:
     scrape_interval: 30s
     evaluation_interval: 30s

@@ -121,13 +121,15 @@ buffered_outputs: false
 # For debugging/testing it is possible to simulate the drops using
 # the `simulate_drops: true`. In this case the threshold does not apply.
 
-syscall_event_drops:
-  threshold: .1
-  actions:
-    - log
-    - alert
-  rate: .03333
-  max_burst: 1
+# I do not care about these events on my home network, so this whole section
+# is commented out
+# syscall_event_drops:
+#   threshold: .1
+#   actions:
+#     - log
+#     - alert
+#   rate: .03333
+#   max_burst: 1
 
 # Falco uses a shared buffer between the kernel and userspace to receive
 # the events (eg., system call information) in userspace.
@@ -280,6 +282,7 @@ grpc:
 # By default it is off.
 # By enabling this all the output events will be kept in memory until you read them with a gRPC client.
 # Make sure to have a consumer for them or leave this disabled.
+# Enable so the falco-exporter can consume these vents
 grpc_output:
   enabled: true
 
