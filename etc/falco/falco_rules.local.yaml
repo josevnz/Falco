@@ -7,3 +7,7 @@
 #   tags: [users, container]
 
 # Or override/append to any rule, macro, or list from the Default Rules
+
+- rule: Delete or rename shell history
+  append: true
+  condition: and user.name=root

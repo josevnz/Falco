@@ -219,13 +219,95 @@ Starting internal webserver, listening on port 8765
 {"output":"19:32:02.434286167: Informational Container with sensitive mount started (user=root user_loginuid=0 command=container:ef061174c7ef distracted_lalande (id=ef061174c7ef) image=fedora:latest mounts=/root:/mnt::true:rprivate)","priority":"Informational","rule":"Launch Sensitive Mount Container","source":"syscall","tags":["cis","container","mitre_lateral_movement"],"time":"2022-05-01T23:32:02.434286167Z", "output_fields": {"container.id":"ef061174c7ef","container.image.repository":"fedora","container.image.tag":"latest","container.mounts":"/root:/mnt::true:rprivate","container.name":"distracted_lalande","evt.time":1651447922434286167,"proc.cmdline":"container:ef061174c7ef","user.loginuid":0,"user.name":"root"}}
 ```
 
+So far looks interesting, but what about this?
+
+```json lines
+{"output":"23:04:10.609949471: Warning Shell history had been deleted or renamed (user=josevnz user_loginuid=1000 type=openat command=bash fd.name=/home/josevnz/.bash_history-01112.tmp name=/home/josevnz/.bash_history-01112.tmp path=<NA> oldpath=<NA> host (id=host))","priority":"Warning","rule":"Delete or rename shell history","source":"syscall","tags":["mitre_defense_evasion","process"],"time":"2022-05-04T03:04:10.609949471Z", "output_fields": {"container.id":"host","container.name":"host","evt.arg.name":"/home/josevnz/.bash_history-01112.tmp","evt.arg.oldpath":null,"evt.arg.path":null,"evt.time":1651633450609949471,"evt.type":"openat","fd.name":"/home/josevnz/.bash_history-01112.tmp","proc.cmdline":"bash","user.loginuid":1000,"user.name":"josevnz"}}
+{"output":"23:04:10.635602857: Warning Shell history had been deleted or renamed (user=josevnz user_loginuid=1000 type=openat command=bash fd.name=/home/josevnz/.bash_history-01627.tmp name=/home/josevnz/.bash_history-01627.tmp path=<NA> oldpath=<NA> host (id=host))","priority":"Warning","rule":"Delete or rename shell history","source":"syscall","tags":["mitre_defense_evasion","process"],"time":"2022-05-04T03:04:10.635602857Z", "output_fields": {"container.id":"host","container.name":"host","evt.arg.name":"/home/josevnz/.bash_history-01627.tmp","evt.arg.oldpath":null,"evt.arg.path":null,"evt.time":1651633450635602857,"evt.type":"openat","fd.name":"/home/josevnz/.bash_history-01627.tmp","proc.cmdline":"bash","user.loginuid":1000,"user.name":"josevnz"}}
+{"output":"23:04:10.635851215: Warning Shell history had been deleted or renamed (user=josevnz user_loginuid=1000 type=rename command=bash fd.name=<NA> name=<NA> path=<NA> oldpath=/home/josevnz/.bash_history-01627.tmp host (id=host))","priority":"Warning","rule":"Delete or rename shell history","source":"syscall","tags":["mitre_defense_evasion","process"],"time":"2022-05-04T03:04:10.635851215Z", "output_fields": {"container.id":"host","container.name":"host","evt.arg.name":null,"evt.arg.oldpath":"/home/josevnz/.bash_history-01627.tmp","evt.arg.path":null,"evt.time":1651633450635851215,"evt.type":"rename","fd.name":null,"proc.cmdline":"bash","user.loginuid":1000,"user.name":"josevnz"}}
+{"output":"23:04:10.661829867: Warning Shell history had been deleted or renamed (user=josevnz user_loginuid=1000 type=rename command=bash fd.name=<NA> name=<NA> path=<NA> oldpath=/home/josevnz/.bash_history-01112.tmp host (id=host))","priority":"Warning","rule":"Delete or rename shell history","source":"syscall","tags":["mitre_defense_evasion","process"],"time":"2022-05-04T03:04:10.661829867Z", "output_fields": {"container.id":"host","container.name":"host","evt.arg.name":null,"evt.arg.oldpath":"/home/josevnz/.bash_history-01112.tmp","evt.arg.path":null,"evt.time":1651633450661829867,"evt.type":"rename","fd.name":null,"proc.cmdline":"bash","user.loginuid":1000,"user.name":"josevnz"}}
+```
+
+This is a normal/ legitimate operation; let's find a way to harden this rule or remove it completely.
+
+First, open the ```/etc/falco/falco_rules.yaml``` file and look for the rule 'Delete or rename shell history' (JSON output we saw earlier):
+
+```yaml
+- list: docker_binaries
+  items: [docker, dockerd, exe, docker-compose, docker-entrypoi, docker-runc-cur, docker-current, dockerd-current]
+
+ macro: var_lib_docker_filepath
+  condition: (evt.arg.name startswith /var/lib/docker or fd.name startswith /var/lib/docker)
+
+- rule: Delete or rename shell history
+  desc: Detect shell history deletion
+  condition: >
+    (modify_shell_history or truncate_shell_history) and
+       not var_lib_docker_filepath and
+       not proc.name in (docker_binaries)
+  output: >
+    Shell history had been deleted or renamed (user=%user.name user_loginuid=%user.loginuid type=%evt.type command=%proc.cmdline fd.name=%fd.name name=%evt.arg.name path=%evt.arg.path oldpath=%evt.arg.oldpath %container.info)
+  priority:
+    WARNING
+  tags: [process, mitre_defense_evasion]
+```
+
+Falco rules are explained [in detail](https://falco.org/docs/rules/) on the official documentation; Just by looking at this piece you will notice a few things:
+
+About the conditions:
+1. Support complex logic, 
+2. macros like ``var_lib_docker_filepath``. 
+3. lists like ```(docker_binaries)```
+4. And special variables with fields like ```proc.name```
+
+It is recommended that do you not change this file, and instead you override what you need on the ```/etc/falco/falco_rules.local.yaml```
+
+```yaml
+# Add new rules, like this one
+# - rule: The program "sudo" is run in a container
+#   desc: An event will trigger every time you run sudo in a container
+#   condition: evt.type = execve and evt.dir=< and container.id != host and proc.name = sudo
+#   output: "Sudo run in container (user=%user.name %container.info parent=%proc.pname cmdline=%proc.cmdline)"
+#   priority: ERROR
+#   tags: [users, container]
+
+# Or override/append to any rule, macro, or list from the Default Rules
+```
+
+For the sake of example, say than we do care when the history of the super-user (root) is override, but everybody else if fine;
+the best part is that you don't have to override the whole rule.
+
+So the original rule will get a condition appended:
+
+```yaml
+- rule: Delete or rename shell history
+  append: true
+  condition: and user.name=root
+```
+
+It is always a good idea to validate than your rules are properly written; For that you need can tell Falco to check the original rules and your overrides together:
+
+```shell
+[root@macmini2 ~]# falco --validate /etc/falco/falco_rules.yaml --validate /etc/falco/falco_rules.local.yaml 
+Fri May  6 20:48:00 2022: Validating rules file(s):
+Fri May  6 20:48:00 2022:    /etc/falco/falco_rules.yaml
+Fri May  6 20:48:00 2022:    /etc/falco/falco_rules.local.yaml
+/etc/falco/falco_rules.yaml: Ok
+/etc/falco/falco_rules.local.yaml: Ok
+Fri May  6 20:48:01 2022: Ok
+
+# If the rules are OK, restart Falco
+[root@macmini2 ~]# systemctl restart falco.service
+```
+
+## A simple data normalizer in Python
+
+You must admit than getting a sense of what rules are noise and which ones are useful is tedious.
+
 We need must normalize this data, we will use a python script that will:
 * Remove non JSON data
 * Aggregate event types without the timestamps
 * Generate a few aggregation statistics, so we can focus on the most frequent events in our system
-
-## A simple data normalizer in Python
-
 
 
 # Falco integrations

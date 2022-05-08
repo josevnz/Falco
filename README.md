@@ -2,6 +2,10 @@
 
 I decided to share the code and configuration files I used on the [Securing mixed clouds using Falco, Prometheus, Grafana and Docker](tutorial/README.md) tutorial.
 
+The whole idea was to document my experience of learning Falco and its integration with other frameworks like Prometheus and Grafana.
+
+# Installation/ setup
+
 You can clone the git repository and install in development mode:
 
 ```shell
@@ -12,11 +16,13 @@ pip install --editable .
 
 # Generating the diagrams
 
+After all the dependencies are installed it should be easy to do:
+
 ```shell
 falco_diagram.py tutorial/falco_monitoring
 ```
 
-# Building the package
+# Experimenting, building the package
 
 If you want to create both the source distribution and wheel you can do this:
 
@@ -26,6 +32,11 @@ python -m venv ~/virtualenv/Falco
 python -m build
 ```
 
-I hope you enjoy this code, please report any bugs or leave your comments.
+Then you can copy/ install to another machine.
+
+I recommend you take a look at the [Tutorial](tutorial/README.md) to get the full picture and overview of the other scripts included on this distribution. 
+
+# Last bits
+I hope you enjoy this code, please [report any bugs or leave your comments](https://github.com/josevnz/Falco/issues).
 
 --Jose
