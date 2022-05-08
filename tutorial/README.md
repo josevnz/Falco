@@ -496,6 +496,12 @@ May 01 20:35:04 macmini2 falco[28288]: Starting gRPC server at unix:///var/run/f
 
 ```
 
+Quickly make sure is OK (reminder, Falco agent is running on macmini2):
+```shell
+josevnz@raspberrypi:~$ curl --fail http://macmini2:8765/healthz
+{"status": "ok"}josevnz@raspberrypi:~$
+```
+
 Then we run the falco-exporter. To make it easier, we will use a Docker container [with a few overrides in the command line](https://docs.docker.com/engine/reference/commandline/run/).
 
 ```shell=
@@ -535,8 +541,7 @@ For completeness, let me show you also how to capture the host performance metri
 docker run --detach --net="host" --pid="host" --volume "/:/host:ro,rslave" quay.io/prometheus/node-exporter:latest --path.rootfs=/host
 ```
 
-The node-exporter and the falco-exporter will rus on every host that needs their data scrapped, now you need wait to collect all these metrics into a single location, for that will use the [Prometheus agent](https://prometheus.io/docs/prometheus/latest/getting_started/):
-
+The node-exporter and the falco-exporter will run on every host that needs their data scrapped, now you need wait to collect all these metrics into a single location, for that will use the [Prometheus agent](https://prometheus.io/docs/prometheus/latest/getting_started/):
 
 ```yaml=
 ---
@@ -576,16 +581,25 @@ Good, Prometheus is able to scrap Falco. We can even run a simple query to see a
 Next we need to setup the UI view for the events, for that we will use Grafana.
 
 There are many ways to install it, in my case [I will use a Grafana Docker container](https://grafana.com/docs/grafana/latest/installation/docker/):
+(I will run Grafana on the same host where prometheus is running: raspberripi.home)
+
 
 ```shell=
-docker run --detach --tty --volume /data/grafana:/var/lib/grafana -p 3000:3000 grafana/grafana:latest
+docker pull grafana/grafana:main-ubuntu
+mkdir -p /data/grafana
+chown syslog /data/grafana
+docker run --user 104 --name grafana --detach --tty --volume /data/grafana:/var/lib/grafana -p 3000:3000 grafana/grafana:main-ubuntu
 ```
 
+After Grafana comes up, you will need to change your password and will also need to connect with Prometheus:
+
+![](grafana-prometheus-falco.png)
 
 
 Once Grafana is up, we can [import the Falco dashboard](https://grafana.com/grafana/dashboards/11914) as [explained here](https://grafana.com/docs/reference/export_import/). 
 
 ![](falco-grafana-integration.png)
+
 
 
 Once the dashboard is imported we can generate a few events to trigger Falco on the host where is installed:
@@ -600,11 +614,39 @@ After a little you should see something like this on your Grafana Dashboard:
 
 The events are flowing, and you can see from which host they came from.
 
-## So I have nice graphs about my events, now what?
+## Creating alerts for your Falco events 
 
-Ideally if you have the events in Grafana, you can make these actionable items and generate alerts from then.
+Ideally if you have the Falco events in Grafana, you can make these actionable items and generate alerts from then.
 
-TODO
+I don't want to get bombarded by non-critical alerts, so the first thing to know is to what level of events to filter:
+
+|ID|Priority|Ignore?|
+|--|--------|-------|
+|7|debug|Yes|
+|6|informational|Yes|
+|5|notice|Yes|
+|4|warning|Yes|
+|3|error|__No__|
+|2|critical|__No__|
+|1|alert|__No__|
+|0|emergency|__No__|
+
+Anything with priority below 3 will be treated as an alert.
+
+Grafana has [good documentation on how to setup an alert](https://grafana.com/docs/grafana/latest/alerting/unified-alerting/alerting-rules/create-grafana-managed-rule/), I will show here the end result only; 
+
+![](grafana-falco-alert-definition.png)
+
+
+
+## Alerts need to go somewhere: Defining a contact point using Discord
+
+Discord has a very detailed guide on how to setup a [WebHook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks), for that reason I will only show you here the simplified steps. 
+
+
+
+
+ 
 
 # Honorable mention: aggregating alerts using Falcon Sidekick/ Falcon Sidekick-UI
 
