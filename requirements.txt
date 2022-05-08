@@ -1,7 +1,7 @@
 build==0.7.0
 commonmark==0.9.1
 diagrams==0.21.1
-graphviz>=0.20
+graphviz>=0.19.2
 importlib==1.0.4
 Jinja2==3.1.2
 MarkupSafe==2.1.1
@@ -12,3 +12,4 @@ pyparsing==3.0.8
 rich==12.4.0
 tomli==2.0.1
 textual==0.1.18
+PyYAML==6.0
