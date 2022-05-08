@@ -300,7 +300,7 @@ Fri May  6 20:48:01 2022: Ok
 [root@macmini2 ~]# systemctl restart falco.service
 ```
 
-## A simple data normalizer in Python
+## A simple event explorer in Python
 
 You must admit than getting a sense of what rules are noise and which ones are useful is tedious.
 
@@ -383,8 +383,8 @@ Once the file is loaded as a dictionary we only need to iterate to it to aggrega
 
 ## Showing the falco rules
 
-If you are like me, you are always looking at the /etc/falco/falco_rules.yaml file to understand what is being monitored; A brief
-view of those rules (without looking at the verbose YAML file with comments) is a nice addition:
+If you are like me, you are always looking at the /etc/falco/falco_rules.yaml file to understand what is being monitored; 
+A brief view of those rules (without looking at the verbose YAML file with comments) is a nice addition:
 
 ```python
 #!/usr/bin/env python3
@@ -432,7 +432,7 @@ if __name__ == "__main__":
         CONSOLE.print("[bold]Program interrupted...[/bold]")
 ```
 
-You may improve this script by adding rule filtering by certain criteria, for example (rule name, priority, enabled/ disabled):
+You could improve this script by adding rule filtering by certain criteria, for example (rule name, priority, enabled/ disabled). This version doesn't do any filtering:
 
 [![asciicast](https://asciinema.org/a/492908.svg)](https://asciinema.org/a/492908)
 
@@ -443,8 +443,7 @@ You probably noticed 2 things from our earlier experimentation:
 1. The payload of the events do not have the host; If you want to locate an offending server, you need to improve how a multi-host event is reported (parsing a journalctl file from many hosts is not practical).
 2. We want to get alerts in a centralized location; it would be nice to have a way to "push" those events instead of us going to fish
 
-Let's take a look how to integrate this with Grafana. For that will use the following:
-
+It is time to consolidate those alerts in a single place.
 
 ## Falco exporter
 
@@ -637,20 +636,37 @@ Grafana has [good documentation on how to setup an alert](https://grafana.com/do
 
 ![](grafana-falco-alert-definition.png)
 
-
+Next step is to send the alerts somewhere.
 
 ## Alerts need to go somewhere: Defining a contact point using Discord
 
-Discord has a very detailed guide on how to setup a [WebHook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks), for that reason I will only show you here the simplified steps. 
+For this example we will use [Discord](https://discord.com/) as the end for the alerts; Discord has a very detailed guide on how to setup a [WebHook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks), 
+for that reason I will only show you here the end results of my discord Webhook:
 
+![](grafana-discord-webhook.png)
 
-
-
+We copy that URL and then will configure a new Grafana contact point that uses our Discord webhook (_we are setting this a default contact point for all the alerts_):
  
+![](grafana-contact-point-discord.png)
 
-# Honorable mention: aggregating alerts using Falcon Sidekick/ Falcon Sidekick-UI
+From there we can send a test message to Discord, just to confirm this pipeline works:
 
-[Falco Sidekick](https://github.com/falcosecurity/falcosidekick) is another way to gather and send events to other destinations, like the [Falco Sidekick-UI](https://github.com/falcosecurity/falcosidekick-ui). But it has a very important missing feature: It won't tell you the originating host (At least until Falco 0.31.1).
+![](grafana-discord-events-test.png)
+
+Getting closer; By now if we go back to our alert definition we should see it is on the 'firing' state:
+
+![](grafana-falco-alert-firing.png)
+
+And if everything goes well we see also our first Falco alert in Discord:
+
+![](grafana-falco-discord-alert.png)
+
+We can see here all the fields we get on the journalctl output, difference is that all these messages will come from all the servers where you define the Falco-Prometheus-Grafana bridge.
+
+
+## Honorable mention: aggregating alerts using Falcon Sidekick/ Falcon Sidekick-UI
+
+[Falco Sidekick](https://github.com/falcosecurity/falcosidekick) is another way to gather and send events to other destinations, like the [Falco Sidekick-UI](https://github.com/falcosecurity/falcosidekick-ui). But it won't tell you the originating host (At least until Falco 0.31.1).
 
 This is most likely not an issue for an alert coming from a K8s cluster or a containerized application where the image name will give you plenty of information but if is your event happens on a bare-metal environment, and you have more than 2 machines it will become a headache. 
 
@@ -658,4 +674,9 @@ For that reason I won't cover Sidekick here, you may want to stick with the Graf
 
 # Learning more
 
-* Falco has a perfect interactive learning [environment](https://falco.org/docs/getting-started/third-party/learning/); You should try it to see what else is possible, there is a lot of things I did not cover here, like rule exceptions for example
+* Falco has a great interactive learning [environment](https://falco.org/docs/getting-started/third-party/learning/); You should try it to see what else is possible, there is a lot of things I did not cover here, like rule exceptions for example.
+* Did you know that Falco can be extended using [plugins](https://falco.org/docs/plugins/)? You can have fun and learn using C++ or Go as the language of choice
+* The Falco blog has lots of [interesting articles](https://falco.org/blog/), including posts for the latest threats.
+* The project has a very active community on [many channels](https://falco.org/community/). Pick yours and explore.
+
+Feel free to [fork my code](https://github.com/josevnz/Falco) and report [any issues](https://github.com/josevnz/Falco/issues) if you find any. But more important, explore and learn by doing.
