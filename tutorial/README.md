@@ -1,4 +1,4 @@
-# Securing mixed clouds using Falco, Prometheus, Grafana and Docker
+# Securing server infrastructure clouds using Falco, Prometheus, Grafana and Docker
 
 I was recently looking for a way to keep tabs on our containers and applications at work; specifically was interested on detecting anomalies in the configuration and after a little research, I stumbled on [Falco](https://github.com/falcosecurity/falco).
 
